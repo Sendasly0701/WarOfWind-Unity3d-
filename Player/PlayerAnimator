@@ -1,0 +1,331 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class PlayerAnimator : MonoBehaviour {
+
+    /* Component */
+    private Animator anima;
+    private Rigidbody _rigidbody;
+    private PlayerInput player;
+
+    public GameObject playerModel;
+    /* Component */
+
+    [SerializeField] public Vector3 playerMove;
+    private Vector3 ThrustVectro;
+
+    [SerializeField] public bool run;
+    public float runSpeed;
+    public float walkSpeed;
+    public float jumpHeight;
+    public float rollThrust;
+
+    [Space(10)]
+    [Header("===== Seting Friction =====")]
+    [SerializeField] private PhysicMaterial frictionOne;
+    [SerializeField] private PhysicMaterial frictionZero;
+    private CapsuleCollider casule;
+
+    public bool jump;
+    private bool lastJump;
+
+    public bool attack1;
+    private bool lastAttack1;
+    private bool ableAttack1;
+
+    public bool attack2;
+    private bool lastAttack2;
+    private bool ableAttack2;
+
+    public bool attack3;
+    private bool lastAttack3;
+    private bool ableAttack3;
+
+    private float lerpValue;
+
+    private bool lockPlanar;
+    // private Vector3 deltaPosition;
+
+    
+
+    private void Awake()
+    {
+        anima = playerModel.GetComponent<Animator>();
+        _rigidbody = GetComponent<Rigidbody>();
+        player = GetComponent<PlayerInput>();
+        casule = GetComponent<CapsuleCollider>();
+    }
+
+
+    // Update is called once per frame
+    void Update() {
+        AnimaContorl();
+    }
+
+    /// <summary>
+    /// Update Physics Action.
+    /// </summary>
+    private void FixedUpdate()
+    {
+        //_rigidbody.position += playerMove * Time.fixedDeltaTime;
+        //_rigidbody.position += deltaPosition;  //在此增加 RootMotion的position
+        _rigidbody.velocity = new Vector3(playerMove.x, _rigidbody.velocity.y, playerMove.z) + ThrustVectro;
+        ThrustVectro = Vector3.zero;
+        //deltaPosition = Vector3.zero;  
+    }
+
+    private void AnimaContorl()
+    {
+        if (Input.GetKey(KeyCode.LeftShift))
+        {
+            run = true;
+        }
+        else
+        {
+            run = false;
+        }
+        anima.SetFloat("Action", player.AxisPoint * Mathf.Lerp(anima.GetFloat("Action"), (run) ? 2.0f : 1.0f, 0.5f));
+        if (player.AxisPoint > 0.1f)
+        {
+            playerModel.transform.forward = player.AxisDirection;
+        }
+
+        if (lockPlanar == false)
+        {
+            playerMove = player.AxisPoint * playerModel.transform.forward * walkSpeed * ((run) ? runSpeed : 1.0f);
+        }
+
+        bool newJump = Input.GetKey(KeyCode.Space);
+        if (newJump != lastJump && newJump == true)
+        {
+            jump = true;
+        }
+        else
+        {
+            jump = false;
+        }
+        lastJump = newJump;
+        if (jump)
+        {
+            anima.SetTrigger("Jump");
+            ableAttack1 = false;
+        }
+
+        if (_rigidbody.velocity.magnitude > 0)
+        {
+            anima.SetTrigger("Roll");
+        }
+        /*
+        if(Input.GetMouseButtonDown(0) || Input.GetKey(KeyCode.Q) || Input.GetKey(KeyCode.E))
+        {
+            p_Trigger.OnTriggerEnter();
+        }*/
+
+
+        // - 以下代码块为各类攻击动画的触发及关闭.
+        bool newAttack1 = Input.GetMouseButtonDown(0);
+        if(newAttack1 != lastAttack1 && newAttack1 == true)
+        {
+            attack1 = true;
+        }
+        else
+        {
+            attack1 = false;
+
+        }
+        lastAttack1 = newAttack1;
+        if (attack1 && CheckState("InGround") && ableAttack1)
+        {
+            anima.SetTrigger("Attack1");
+        }
+
+        bool newAttack2 = Input.GetKey(KeyCode.E);
+        if(newAttack2 != lastAttack2 && newAttack2 == true)
+        {
+            attack2 = true;
+        }
+        else
+        {
+            attack2 = false;
+        }
+        if(attack2 && CheckState("InGround") && ableAttack2)
+        {
+            anima.SetTrigger("Attack2");
+        }
+
+        bool newAttack3 = Input.GetKey(KeyCode.Q);
+        if(newAttack3 != lastAttack3 && newAttack3 == true)
+        {
+            attack3 = true;
+        }
+        else
+        {
+            attack3 = false;
+        }
+        if(attack3 && CheckState("InGround") && ableAttack3)
+        {
+            anima.SetTrigger("Attack3");       
+        }
+        // -       
+    }
+
+    /*
+    /// <summary>
+    /// 响应Unity中攻击动画所设置的Event
+    /// </summary>
+    public void AttackStart()
+    {
+        p_Weapon.enabled = true;
+    }
+
+    public void AttackEnd()
+    {
+        p_Weapon.enabled = false;
+    }
+    */
+
+    //-------------------- -----------------
+
+    private bool CheckState(string stateName,string layerName = "Base Layer")
+    {
+        return anima.GetCurrentAnimatorStateInfo(anima.GetLayerIndex(layerName)).IsName(stateName);
+    }
+
+    ///
+    /// --------------- sever -------------
+    ///
+
+    public void OnJumpEnter()
+    {
+        //print("Jump Enter");
+        player.inputEnabled = false;
+        lockPlanar = true;
+        ThrustVectro = new Vector3(0, jumpHeight, 0);
+    }
+    public void OnJumpExit()
+    {
+        //print("Jump Exit");
+        player.inputEnabled = true;
+        lockPlanar = false;
+    }
+
+    public void OnGroundEnter()
+    {
+        ableAttack1 = true;
+        ableAttack2 = true;
+        ableAttack3 = true;
+
+        casule.material = frictionOne;
+    }
+    public void OnGroundExit()
+    {
+        ableAttack1 = false;
+        ableAttack2 = false;
+        ableAttack3 = false;
+
+        casule.material = frictionZero;
+    }
+
+    public void IsGround()
+    {
+        anima.SetBool("IsGround", true);
+    }
+    public void IsNotGround()
+    {
+        anima.SetBool("IsGround", false);
+    }
+
+    public void OnRollEnter()
+    {
+        ThrustVectro = new Vector3(rollThrust, 0, 0);
+    }
+
+    public void OnJabEnter()
+    {
+       player.inputEnabled = false;
+       lockPlanar = true;
+    }
+    public void OnJabExit()
+    {
+        player.inputEnabled = true;
+        lockPlanar = false;
+    }
+
+    public void OnUpdateJab()
+    {
+        ThrustVectro = playerModel.transform.forward * anima.GetFloat("JabVelocity");
+    }
+
+    public void OnAttack1Enter()
+    {
+        player.inputEnabled = false;
+        lerpValue = 1.0f;
+    }
+    
+    public void OnAttack1Update()
+    {
+        ThrustVectro = playerModel.transform.forward * anima.GetFloat("Attack1Velocity");
+        anima.SetLayerWeight(anima.GetLayerIndex("Attack Layer"), Mathf.Lerp(anima.GetLayerWeight(anima.GetLayerIndex("Attack Layer")), lerpValue, 0.35f));
+    }
+
+    public void OnIdleEnter()
+    {     
+        player.inputEnabled = true;
+        lerpValue = 0.0f;
+    }
+    public void OnAttackIdleUpdate()
+    {
+        anima.SetLayerWeight(anima.GetLayerIndex("Attack Layer"), Mathf.Lerp(anima.GetLayerWeight(anima.GetLayerIndex("Attack Layer")), lerpValue, 0.35f));
+    }
+
+    public void OnSlash3Update()
+    {
+        ThrustVectro = playerModel.transform.forward * 1.1f;
+    }
+
+    public void OnSlash4Update()
+    {
+        ThrustVectro = playerModel.transform.forward * anima.GetFloat("Slash4Velocity");
+    }
+
+    public void OnHuiShenZhanEnter()
+    {
+        player.inputEnabled = false;
+        lerpValue = 1.0f;
+    }
+    public void OnHuiShenZhanUpdate()
+    {
+        anima.SetLayerWeight(anima.GetLayerIndex("Attack Layer"), Mathf.Lerp(anima.GetLayerWeight(anima.GetLayerIndex("Attack Layer")), lerpValue, 0.35f));
+        ThrustVectro = playerModel.transform.forward * anima.GetFloat("HuiShenZhanVelocity");
+    }
+
+    public void OnTiaoZhanEnter()
+    {
+        player.inputEnabled = false;
+        lerpValue = 1.0f;
+    }
+    public void OnTiaoZhanUpdate()
+    {
+        anima.SetLayerWeight(anima.GetLayerIndex("Attack Layer"), Mathf.Lerp(anima.GetLayerWeight(anima.GetLayerIndex("Attack Layer")), lerpValue, 0.35f));
+        ThrustVectro = playerModel.transform.forward * anima.GetFloat("HuiShenZhanVeloctiy");
+    }
+
+   
+
+    /*
+    public void OnUpdateRootMotion(Vector3 _deltaPosition)
+    {
+        if (CheckState(StateName,LayerName))
+        {
+            deltaPosition += (Vector3)_deltaPosition;
+        }
+    }
+    接收拥有Animator组件的物体上传信号，以来控制 RootMotion， 
+    上传信号是在 OnAnimatorMove //Unity内置方法//  中调用 SendMessageUpWard（"FunctionName",(Object)Animator.deltaPositon/deltaRotation）
+    记得 拆箱。 忍不住想复习一下昨天背的摘自《傲慢与偏见》第一段：
+    It is a truth universally acknowleged,that a single man in possession of good fortune,must be in wang of a wife.
+    However little known the feeling or views of such man may be on his first entering neighbourhood.
+    That truth is so well fixed of surround families,that he considered as rightfull porperty of someone or other of their daughters.
+    */
+}
