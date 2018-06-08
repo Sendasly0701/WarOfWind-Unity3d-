@@ -1,0 +1,104 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class CameraControl : MonoBehaviour {
+
+    [SerializeField] public PlayerInput playerInput;
+    [SerializeField] public GameObject model;
+    private GameObject CameraHandle;
+    private GameObject PlayerHandle;
+    private GameObject _camera;
+
+    public float rotateSpeedY;
+    public float rotateSpeedX;
+    public float smoothValue;
+    private float tempEuler;
+    private float tempEuler2;
+
+    private Vector3 saveSmoothValue;
+    private Vector3 saveSmoothValue2;
+
+    [SerializeField] private Image lockUI;
+    [SerializeField] private bool lockBool;
+    //private bool lockButton = Input.GetKeyDown(KeyCode.Tab);
+    [SerializeField]
+    private GameObject enemyTarget;
+    // Use this for initialization
+    private void Awake()
+    {
+        CameraHandle = transform.parent.gameObject;
+        PlayerHandle = CameraHandle.transform.parent.gameObject;
+        tempEuler = 10.0f;
+        _camera = Camera.main.gameObject;
+
+        lockUI.enabled = false;
+        lockBool = false;
+    }
+
+    // Update is called once per frame
+    void FixedUpdate ()
+    {
+        if (enemyTarget == null)
+        {
+            Vector3 modelEuler = model.transform.eulerAngles;
+   
+            //CameraHandle.transform.Rotate(Vector3.up, playerInput.Vhorizontal * rotateSpeedY * Time.fixedDeltaTime);
+
+            tempEuler -= playerInput.Vvertical * rotateSpeedX * Time.fixedDeltaTime;
+            tempEuler2 -= playerInput.Vhorizontal * rotateSpeedY * Time.fixedDeltaTime;
+            tempEuler = Mathf.Clamp(tempEuler, -9.0f, 40.0f);
+            CameraHandle.transform.localEulerAngles = new Vector3(tempEuler, tempEuler2, 0);
+            model.transform.eulerAngles = modelEuler;
+        }
+        else
+        {
+            Vector3 lockDircetion = enemyTarget.transform.position - model.transform.position;
+            lockDircetion.y = 0;
+            PlayerHandle.transform.forward = Vector3.SmoothDamp(PlayerHandle.transform.forward, lockDircetion, ref saveSmoothValue2, smoothValue);          
+        }
+
+        _camera.transform.position = Vector3.SmoothDamp(_camera.transform.position, transform.position, ref saveSmoothValue, smoothValue);
+        _camera.transform.rotation = transform.rotation;
+    }
+
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Tab))
+        {
+            lockContorl();
+        }
+    }
+
+    private void lockContorl()
+    {
+        Vector3 centerPoint1 = model.transform.position + new Vector3(0, 1, 0);
+        Vector3 centerpoint2 = centerPoint1 + model.transform.forward * 5.0f;
+        Collider[] coll = Physics.OverlapBox(centerpoint2, new Vector3(0.5f, 0.5f, 6.0f), model.transform.rotation, LayerMask.GetMask("Enemy"));
+
+        if(coll.Length == 0)
+        {
+            enemyTarget = null;
+            lockUI.enabled = false;
+            lockBool = false;
+        }
+        else
+        {
+            foreach (var col in coll)
+            {
+                if(enemyTarget == col.gameObject)
+                {
+                    enemyTarget = null;
+                    lockUI.enabled = false;
+                    lockBool = false;
+                    break;
+                }
+                enemyTarget = col.gameObject;
+                lockUI.enabled = true;
+                lockBool = true;
+                break;
+            }
+        }   
+    }
+}
