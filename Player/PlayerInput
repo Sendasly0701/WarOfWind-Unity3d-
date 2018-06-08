@@ -1,0 +1,75 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+[System.Serializable]
+public class InputKey
+{
+    public string up, down, left, right;
+    /* w, s, a, d */
+    public string vUp, vDown, vLeft, vRight;
+    /* t, g, f, h */
+}
+public class PlayerInput : MonoBehaviour {
+    [Header("===== InputKey =====")]
+    public InputKey key;
+
+    private float Dhorizontal;
+    private float Dvertical;
+    private float saveH;
+    private float saveV;
+
+    public float Vhorizontal;
+    public float Vvertical;
+
+    [Header("===== Output key Vaule =====")]
+    [SerializeField] public float Dup;
+    [SerializeField] public float Dright;
+
+    [Header("===== AxisPointAndDirection =====")]
+    public float AxisPoint;
+    public Vector3 AxisDirection;
+
+    [Header("==========")]
+    public bool inputEnabled = true;
+
+	// Update is called once per frame
+	void Update () {
+
+        Vvertical = (Input.GetKey(key.vUp) ? 1.0f : 0.0f) - (Input.GetKey(key.vDown) ? 1.0f : 0.0f);
+        Vhorizontal = (Input.GetKey(key.vRight) ? 1.0f : 0.0f) - (Input.GetKey(key.vLeft) ? 1.0f : 0.0f);
+
+        Dhorizontal = (Input.GetKey(key.right) ? 1.0f : 0.0f) - (Input.GetKey(key.left) ? 1.0f : 0.0f);
+        Dvertical = (Input.GetKey(key.up) ? 1.0f : 0.0f) - (Input.GetKey(key.down) ? 1.0f : 0.0f);
+
+        if(inputEnabled == false)
+        {
+            Dhorizontal = 0;
+            Dvertical = 0;
+        }
+
+        Dup = Mathf.SmoothDamp(Dup, Dvertical, ref saveV, 0.1f);
+        Dright = Mathf.SmoothDamp(Dright, Dhorizontal, ref saveH, 0.1f);
+
+        Vector2 EllipticalVector2 = EllipticalGridMapping(new Vector2(Dright, Dup));
+        float s_Dup = EllipticalVector2.y;
+        float s_Dright = EllipticalVector2.x;
+
+        AxisPoint = Mathf.Sqrt(s_Dup * s_Dup + s_Dright * s_Dright);
+        AxisDirection = s_Dup * transform.forward + s_Dright * transform.right;
+	}
+
+    /// <summary>
+    /// 椭圆公式，解决坐标轴斜方向和正方向速率不一样问题.
+    /// Link <https://arxiv.org/ftp/arxiv/papers/1509/1509.06344.pdf>.
+    /// </summary>
+    /// <returns> return Vector2 To Horizontal and Vetical </returns>
+    private Vector2 EllipticalGridMapping(Vector2 input)
+    {
+        Vector2 output = Vector2.zero;
+        output.x = input.x * Mathf.Sqrt(1 - input.y * input.y / 2);
+        output.y = input.y * Mathf.Sqrt(1 - input.x * input.x / 2); 
+
+        return output;
+    }		
+}
