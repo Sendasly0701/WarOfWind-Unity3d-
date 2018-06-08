@@ -1,0 +1,152 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityStandardAssets.CrossPlatformInput;
+
+public class MouseCameraControl : MonoBehaviour {
+
+    [SerializeField] private GameObject target;
+    [SerializeField] private Transform pivot;         //Camera围绕的点.
+    [SerializeField] private Transform s_Camera;      //Main.Camera
+    [SerializeField] private Transform _playerImage;  //显示小地图的人物图标，就在这里调整一下它的方向与人物一致.
+
+    [Space(10)]
+    [Header("----- value  -----")]
+    [SerializeField] private float herizontalSpeed;
+    [SerializeField] private float veticalSpeed;
+    [SerializeField] private float scrollWheelSpeed;
+    [SerializeField] private float smoothValue;
+
+    [SerializeField] private float distanceZ;  //0
+    [SerializeField] private float distanceY;  //0
+    
+    [SerializeField] private float s_Min;   //Clamp 
+    [SerializeField] private float s_Max;
+
+    private float titAngle;
+    private float lookAngle;
+
+    private Quaternion s_PivotTargetRot;
+    private Quaternion s_TransformTargetRot;
+    private Vector3 s_PivolEuler;
+
+    //接收玩家的Attribute中的bool来判断玩家是否存活.
+    [SerializeField] private PlayerAttribute playerAttribute;
+
+    //接收Enemy2的视角锁定bool在的类
+    [SerializeField] private Enemy2Control enemy2Control;
+
+    [SerializeField] private Camera _MinMapCamera;  //获取小地图的Camera，为了实现控制小地图大小的功能.
+
+
+
+    private void Awake()
+    {
+        s_PivotTargetRot = pivot.transform.localRotation;
+        s_TransformTargetRot = transform.localRotation;
+        s_PivolEuler = pivot.rotation.eulerAngles;
+
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+    }
+
+ 
+
+    private void Update()
+    {
+        CameraFollowTarget();  //Get MainCameraFollowTarget function.
+        MinMapControl();       //Get MinMapCamera control for it size function.
+
+
+        if (Input.GetMouseButton(1))
+        {
+            CameraControl();
+        }
+
+        if(playerAttribute._OnOrOffAttack == true )
+        {
+            if(enemy2Control.viewLock == false)
+            {
+                if (Input.GetKey(KeyCode.W))
+                {
+                    target.transform.forward = transform.forward;  //以解决摄像机转向后人物控制是反的问题（我原本以为很难，结果一句就解决了，真的是局者迷）
+                    _playerImage.forward = target.transform.forward;
+                }
+            }           
+        }
+    }
+
+    protected void CameraFollowTarget()
+    {
+        if (target == null) return;
+        /*
+        if(Input.GetAxis("Mouse ScrollWheel") < 0)
+        {
+            // distanceZ -=   scrollWheelSpeed * Time.deltaTime;  //ScrollWheel
+            Camera.main.fieldOfView += 2;
+        }
+        else if(Input.GetAxis("Mouse ScrollWheel") > 0)
+        {
+            //distanceZ +=   scrollWheelSpeed * Time.deltaTime;  //ScrollWheel
+            Camera.main.fieldOfView -= 2;
+        }
+        else
+        {
+            return;
+        }*/         //sorry，鼠标滚轮控制视角会出现很多bug，例如Mian.camera会脱离目标且不能平滑跟随等。
+        
+        //distanceZ = Mathf.Clamp(distanceZ, -3.0f, 2.5f);
+
+        transform.position = Vector3.Lerp
+        (
+        transform.position, 
+        //target.transform.position + new Vector3(0.0f,distanceY, -distanceZ), 
+        target.transform.position,
+        smoothValue * Time.deltaTime
+        );
+
+        s_Camera.position += new Vector3(0, 0, distanceZ);  //ScrollWheel Contorl View
+    }
+
+    protected void CameraControl()
+    {
+        if (Time.timeScale < float.Epsilon) return;
+
+        var x = CrossPlatformInputManager.GetAxis("Mouse X"); // x change y
+        var y = CrossPlatformInputManager.GetAxis("Mouse Y"); // y change x
+
+        // y 
+        titAngle -= y * herizontalSpeed;
+        titAngle = Mathf.Clamp(titAngle, -s_Min, s_Max);
+        s_PivotTargetRot = Quaternion.Euler(titAngle, s_PivolEuler.y, s_PivolEuler.z);
+
+        //x
+        lookAngle += x * veticalSpeed;
+        s_TransformTargetRot = Quaternion.Euler(0.0f, lookAngle, 0.0f);
+
+        //x,y
+        pivot.localRotation = s_PivotTargetRot;
+        transform.localRotation = s_TransformTargetRot;
+    }
+
+    /// <summary>
+    /// 利用按键控制小地图视野，因为游戏地图较大，敌人也并不是直接冲向玩家，所以这样做找敌人就方便一些。
+    /// 不然玩家体验感不好那就真不好了..
+    /// hello world(-,-
+    /// </summary>
+    private void MinMapControl()
+    {
+        float sizeValue = _MinMapCamera.orthographicSize;
+        sizeValue = Mathf.Clamp(sizeValue,12.0f,40.0f);  //15.0 和 40.0 是在Unity里测试d较好的视野，就直接赋值了.
+        if (Input.GetKey(KeyCode.R) || Input.GetKey(KeyCode.UpArrow))
+        {
+            sizeValue += 0.25f;   //值弄小点，否则速度太快了.
+        }
+        else if (Input.GetKey(KeyCode.F) || Input.GetKey(KeyCode.DownArrow))
+        {
+            sizeValue -= 0.25f;
+        }
+        _MinMapCamera.orthographicSize = sizeValue;
+    }
+}
+                                                    
