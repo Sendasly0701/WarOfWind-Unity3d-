@@ -1,0 +1,43 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class TriggerControl : MonoBehaviour {
+
+    private Animator anima;
+
+    [SerializeField] private Collider p_Weapon; //获取玩家的武器，之后将判断什么时候该启用它.
+
+    //接收Enemy2的视角锁定bool在的类
+    [SerializeField] private Enemy2Control enemy2Control;
+
+    private void Awake()
+    {
+        anima = GetComponent<Animator>();
+        p_Weapon.enabled = false;   //事先将其设置为关闭.
+    }
+
+
+    public void ResetTrigger(string triggerName)
+    {
+        anima.ResetTrigger(triggerName);
+    }
+
+
+    /// <summary>
+    /// 响应Unity Event Function
+    /// </summary>
+    public void AttackStart()
+    {
+        p_Weapon.enabled = true;      
+    }
+
+    public void AttackEnd()
+    {
+        p_Weapon.enabled = false;
+    }
+    public void ViewLockOnStand()
+    {
+        enemy2Control.viewLock = false;
+    }
+}
