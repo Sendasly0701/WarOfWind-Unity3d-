@@ -1,0 +1,38 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class OnSensorGround : MonoBehaviour {
+
+    [SerializeField] public CapsuleCollider capsuleCollider;
+
+    private Vector3 point1;
+    private Vector3 point2;
+    private float Radius;
+    // Use this for initialization
+    private void Awake()
+    {
+        Radius = capsuleCollider.radius;
+    }
+
+    // Update is called once per frame
+    void FixedUpdate () {
+        point1 = transform.position + transform.up * Radius;
+        point2 = transform.position + transform.up * capsuleCollider.height - transform.up * Radius;
+
+        Collider[] outputColls = Physics.OverlapCapsule(point1, point2, Radius,LayerMask.GetMask("Ground"));
+        if(outputColls.Length != 0)
+        {
+            //   foreach (var coll in outputColls)
+            //   {
+            //       print("collision: " + coll.name);
+            //   }
+
+            SendMessageUpwards("IsGround");
+        }
+        else
+        {
+            SendMessageUpwards("IsNotGround");
+        }
+	}
+}
