@@ -1,0 +1,232 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.AI;
+
+
+public class Enemy2Control : MonoBehaviour {
+
+    //这些模块是关于Enemy2的ai相关功能
+    [Header("----- Value -----")]        //此模块是赋予各种值.
+    //[SerializeField] private float moveSpeed;
+    [SerializeField] private float _RayDistance;
+
+    [Header("----- Component -----")]    //此模块是获取各类组件.
+    [SerializeField] private Transform target;   // Get Player .
+    [SerializeField] private Animator _PlayerAnimator;   //h获取玩家的动画组件.
+
+
+    private NavMeshAgent nav;   // Get Unity NavMeshAgent Component.
+    private Animator anima;     // Get Unity Animator Component.
+    private Canvas canvas;    //获取Canvas组件.  在这个类中，将Enemy2Canvas始终朝向Main.Camera.
+
+    //[SerializeField] private GameObject _WeaponSpecially;    // 获取武器特效.
+    [SerializeField] private GameObject _WaterBlueSpecially; //获取boss身上的水蓝光特效.   
+
+    // --------------------- 萌新分割线  --------------------------
+    //这个模块是关于Enemy2的血量或攻击等相关属性的赋值.
+    public int _Enemy2Hp = 1000;       //Enemy2's hp as time
+    public int _Enemy2MaxHp = 1000;    //Enemy2's MaxHp
+    int n = 0;  //这个是判断玩家被击飞的条件，写为公共变量.
+
+    //获取Enemy2身上的Trigger
+    [SerializeField] private Collider _WeaponTrigger;
+
+    public float _Enemy2SliderValue;
+
+    //获取玩家身上的Attribute方法，来判断玩家是否死亡.
+    private PlayerAttribute playerAttribute;
+    public bool viewLock;   //玩家被击飞后不能将视角与朝向一致.
+
+    //Boss Audio
+    [SerializeField] private AudioSource _IUsedSee;
+    [SerializeField] private AudioSource _LetDieSound;
+    [SerializeField] private AudioSource _Die;
+    [SerializeField] private AudioSource _Boom;
+    [SerializeField] private AudioSource _YouTimeOver;
+
+    [SerializeField] private AudioSource _FirstBgm;
+    [SerializeField] private AudioSource _SeeBoss;
+    [SerializeField] private AudioSource _LetFly;
+
+    int z = 0;  //判断播放
+
+    private void Awake()
+    {
+        nav = GetComponent<NavMeshAgent>();
+        anima = GetComponent<Animator>();
+        canvas = GetComponentInChildren<Canvas>();
+        playerAttribute = target.GetComponent<PlayerAttribute>();
+
+        _WeaponTrigger.enabled = false;
+        viewLock = false;
+    }
+
+
+
+    private void LateUpdate()
+    {
+        canvas.transform.rotation = Camera.main.transform.rotation;  //将Enemy2Canvas始终朝向Main.Camera.
+    }
+
+    private void Update()
+    {
+		Debug.Log ("yunxin");
+        if(playerAttribute._OnOrOffAttack == true)
+        {
+            Vector3 _distance = target.position - transform.position;    //计算boss到玩家的方向.
+            Ray ray = new Ray(transform.position, _distance);            //Ray为从boss自身直接到玩家.
+            RaycastHit hit;
+            if (Physics.SphereCast(ray, 2.0f, out hit))
+            {
+                if (hit.distance < _RayDistance)
+                {
+                    _RayDistance = 70.0f;   //这样使boss不容易跟丢目标.
+                    Debug.DrawRay(transform.position, _distance, Color.green);  //画个线，测试用.              
+                    GameObject hitObject = hit.transform.gameObject;
+                    if (hitObject.tag == "Player")
+                    {
+                        anima.SetBool("Idle", false);  //不能摆了..
+
+                        if (nav.enabled == true)
+                        {                                                   
+                            nav.SetDestination(target.position);    //寻路了..
+                            PlayAudio();
+
+                        }
+                        else
+                        {
+                            return;
+                        }
+
+                        if (Vector3.Distance(hitObject.transform.position, transform.position) > 3.5f )  //判断距离了..
+                        {
+                            if (hitObject.tag != "Player") return;
+
+                            anima.SetBool("Walk", true);
+                            anima.SetBool("Attack1", false);
+                            anima.SetBool("Attack2", false);
+                        }
+                        else if (Vector3.Distance(hitObject.transform.position, transform.position) > 3.0f
+                            && Vector3.Distance(hitObject.transform.position, transform.position) <= 4f)
+                        {
+                            anima.SetBool("Walk", true);                         
+                            anima.SetTrigger("Assault");
+                            anima.SetBool("Attack1", false);
+                            anima.SetBool("Attack2", false);
+                        }
+                        else if (Vector3.Distance(hitObject.transform.position, transform.position) <= 3.0f)
+                        {
+                            anima.SetBool("Walk", false);
+
+                            float probability = Random.Range(0.0f, 100.0f);
+                            if (probability <= 40.0f)
+                            {
+                                anima.SetBool("Attack1", true);
+                                anima.SetBool("Attack2", false);
+                            }
+                            else
+                            {
+                                anima.SetBool("Attack2", true);
+                                anima.SetBool("Attack1", false);
+                            }
+
+                        }
+                    }
+                    else
+                    {
+                        anima.SetBool("Idle", true);
+                    }
+                }
+            }
+        }
+        else   //玩家角色死亡时执行.
+        {
+            anima.SetBool("Idle", true);
+            anima.SetBool("Attack1", false);
+            anima.SetBool("Attack2", false);
+            Debug.Log("角色不再动了");
+        }       
+    }
+
+    /// <summary>
+    /// This function is Enemy2(boss)'s attribute and some operating.
+    /// </summary>
+    public void Enemy2AttributeContorl(int attackValue)
+    {
+        float _HitProbability = Random.Range(0.0f, 10.0f);   //Enemy2触发Hit的概率.
+        if(_HitProbability > 6.5f)
+        {
+            anima.SetTrigger("Hit");
+        }
+        
+        _Enemy2Hp -= attackValue;
+        _Enemy2Hp = Mathf.Clamp(_Enemy2Hp, 0, 1000);
+
+        _Enemy2SliderValue = (float)_Enemy2Hp / (float)_Enemy2MaxHp; 
+
+        if(_Enemy2Hp <= 700 && _Enemy2Hp >= 1)
+        {
+            _WaterBlueSpecially.SetActive(true);
+
+            //这段是我个人觉得最有意思的，boss狂暴后的击飞效果.
+            
+            if(n == 0)
+            {
+                _PlayerAnimator.SetTrigger("Flying");
+                target.position += new Vector3(0, 0, -10);
+                playerAttribute._PlayerHp -= 20;
+                n++;
+                viewLock = true;
+
+                _LetDieSound.Play();
+                _Boom.Play();
+                _LetFly.Play();
+                _SeeBoss.Stop();
+            }
+            
+            int i = Random.Range(0,10);
+            if(i >= 9)
+            {
+                _PlayerAnimator.SetTrigger("Flying");
+                target.position += new Vector3(0, 0, -10);
+                playerAttribute._PlayerHp -= 20;
+                viewLock = true;
+            }
+        }
+
+        if(_Enemy2Hp <= 0)
+        {
+            nav.enabled = false;     //Enemy2 die , off NavMeshAgent .
+            anima.SetBool("Die", true);
+            Debug.Log("Enemy2 is die");
+            _WaterBlueSpecially.SetActive(false);
+
+            _Die.Play();
+        }
+    }
+
+
+    /// <summary>
+    /// 响应Enemy2 anima中设置好的节点方法.
+    /// </summary>
+    public void AttackStart()
+    {
+        _WeaponTrigger.enabled = true;
+    }
+    public void AttackEnd()
+    {
+        _WeaponTrigger.enabled = false;
+    }
+
+    private void PlayAudio()
+    {
+        if (z < 1)
+        {
+            _IUsedSee.Play();
+            _FirstBgm.Stop();
+            _SeeBoss.Play();
+            z++;
+        }
+    }
+}
