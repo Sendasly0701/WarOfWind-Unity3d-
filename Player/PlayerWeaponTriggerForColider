@@ -1,0 +1,84 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class PlayerWeaponTrigger : MonoBehaviour {
+
+    private int n = 1;
+
+    private Enemy1Attribute enemy1Attribute;
+    private Enemy2Control enemy2Control;
+
+    [SerializeField] private PlayerAttribute playerAttribute; //获取玩家的属性类
+
+    //[SerializeField] private Animator anima_1;  // Get Enemy1's Animator;
+
+    //Enemy BloodUI 
+    //小骷髅兵 
+    private Slider _Enemy1Slider;  //小兵的Canvas Slider
+    private Text _Enemy1BloodText;
+
+    //boss
+    [SerializeField] private Slider _Enemy2Slider;     //因为boss是仅有一个，所以可以直接这样赋值.
+    [SerializeField] private Text _Enemy2BloodText;
+
+    //流血效果
+    private ParticleSystem enemy1Partic;
+    [SerializeField] private ParticleSystem enemy2Partic;
+
+    //Audio
+    [SerializeField] private AudioSource _AttackAudio;
+
+    public void OnTriggerEnter(Collider other)
+    {           
+         if (other.tag == "Enemy1")
+         {
+            /*
+             '留个备注，敌人的动画触发和bool留在它的属性脚本里写。
+             */
+            _AttackAudio.Play();
+
+            enemy1Attribute = other.gameObject.GetComponent<Enemy1Attribute>(); //获取攻击到的目标身上的脚本组件.
+            int value = Random.Range(10, 25);        //计算一个随机的数，将其作为伤害
+
+            enemy1Partic = other.gameObject.GetComponentInChildren<ParticleSystem>();  //获取攻击到的敌人身上的粒子系统组件
+            enemy1Partic.Play();
+            Vector3 dir1 = Camera.main.transform.position - enemy1Partic.transform.position;
+            enemy1Partic.transform.rotation = Quaternion.LookRotation(dir1);  //将效果始终朝向MainCamera
+
+            enemy1Attribute.Enemy1AttributeFunction(value);  //传参到这个方法，这个封装的方法会计算出血量.
+                                 
+            _Enemy1Slider = other.gameObject.GetComponentInChildren<Slider>();  //Get Trigger Target's Component
+            _Enemy1Slider.value = enemy1Attribute._EnemyBloodValue;      //value is float , so 83/100 is 0.83       
+                      
+            _Enemy1BloodText = other.GetComponentInChildren<Text>();
+            _Enemy1BloodText.text = (enemy1Attribute._Enemy1Hp) + " / " + (enemy1Attribute._Enemy1MaxHp);           
+
+            Debug.Log("我们击中了目标(Enemy1) " + n + "次");
+            n += 1;
+
+            
+         }    
+         
+        if(other.tag == "Enemy2")
+        {
+            _AttackAudio.Play();
+
+            enemy2Partic.Play();
+            Vector3 dir2 = Camera.main.transform.position - enemy2Partic.transform.position;
+            enemy2Partic.transform.rotation = Quaternion.LookRotation(dir2);  //将效果始终朝向MainCamera
+
+            enemy2Control = other.gameObject.GetComponent<Enemy2Control>();  //获取攻击到的目标身上的脚本组件.
+            int value = Random.Range(5, 11);       //计算一个随机的数，将其作为伤害
+            enemy2Control.Enemy2AttributeContorl(value);   //传参到这个方法，这个封装的方法会计算出血量.
+
+            _Enemy2Slider.value = enemy2Control._Enemy2SliderValue;
+
+            _Enemy2BloodText.text = (enemy2Control._Enemy2Hp) + " / " + (enemy2Control._Enemy2MaxHp);
+
+            Debug.Log("我们击中了目标(Enemy2) " + n + "次");
+            n += 1;
+        }
+    }
+}
