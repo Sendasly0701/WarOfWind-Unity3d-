@@ -1,0 +1,42 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.AI;
+
+public class Enemy1Attribute : MonoBehaviour {
+
+    private Animator anima_1; // Declare Enemy1's AnimatorComponent.
+    private NavMeshAgent nav; //Declare Enemy1's NavMeshAgentComponent.
+
+    //Enemy1 Blood UI Attribute.
+    [Range(0,200)]
+    public int _Enemy1Hp = 200;  //Enemy1目前的血量值
+    public int _Enemy1MaxHp = 200; //Enemy1的最大血量
+
+    public float _EnemyBloodValue; //这个值将在攻击触发时调用给Slider.Value；
+  
+
+
+    private void Awake()
+    {
+        anima_1 = GetComponent<Animator>(); // Get Enemy1's AnimatorComponent.
+        nav = GetComponent<NavMeshAgent>(); // Get Enemy1's NavMeshAgentComponent.
+    }
+
+    public void Enemy1AttributeFunction(int attackValue)
+    {
+        anima_1.SetTrigger("Hit");  // play HeardHit animation as this time.
+        _Enemy1Hp -= attackValue;    //接收实参，进行减血运算。
+        _Enemy1Hp = Mathf.Clamp(_Enemy1Hp, 0, 200);   //Clamp Hp cant is minus number
+
+        _EnemyBloodValue = (float)_Enemy1Hp / (float)_Enemy1MaxHp; //because Slider.Value is float, that 83/100 is 0.83.
+
+        if (_Enemy1Hp <= 0)
+        {
+            nav.enabled = false;
+            anima_1.SetBool("DieFlying", true);
+            Debug.Log("Enemy1 is die");
+            GameObject.Destroy(gameObject, 5.0f);
+        }        
+    }
+}
