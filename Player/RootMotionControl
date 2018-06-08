@@ -1,0 +1,18 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class RootMotionControl : MonoBehaviour {
+
+    private Animator anima;
+    // Use this for initialization
+    private void Awake()
+    {
+        anima = GetComponent<Animator>();
+    }
+
+    public void OnAnimatorMove()
+    {
+        anima.SendMessageUpwards("OnUpdateRootMotion",(object)anima.deltaPosition);
+    }
+}
