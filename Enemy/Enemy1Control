@@ -1,0 +1,183 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.AI;
+using UnityEngine.UI;
+
+public class Enemy1Contorl : MonoBehaviour {
+
+    [Header("----- Value and Component -----")]    //赋予一些值和取得一些组件.
+    [SerializeField] private float moveSpeed;
+    [SerializeField] private float _ray1Distance;  //向前射线的长度
+    [SerializeField] private float _ray2Distance;  //与玩家交互射线的长度
+    private GameObject player;
+
+    //UI 
+    //private GameObject canvas;   //获取此物体身上设置好的Canvas组件.
+    //private GameObject _canvas;
+    private Canvas canvas;
+    //public Slider _slider;     取消在此获得Slider和Text的控制，转到PlayerWeaponTrigger中进行控制。
+    //public Text _bloodText;    敌人的扣血逻辑在玩家的攻击触发里写，玩家的在敌人的攻击触发中写。
+
+    //寻路.
+    private NavMeshAgent nav;
+    // Rigidbody rig;
+    private Animator anima;
+
+    //Attack    
+    [SerializeField] private Collider _Enemy1Collider;
+
+
+    private void Awake()
+    {
+        anima = GetComponent<Animator>();
+        nav = GetComponent<NavMeshAgent>();
+        player = GameObject.FindGameObjectWithTag("Player");
+        //canvas = GameObject.FindGameObjectWithTag("BloodUI");  //获取场上的BloodUI；
+        canvas = GetComponentInChildren<Canvas>();                          
+    }
+
+    private void Start()
+    {
+        //_Enemy1Collider.enabled = false;
+    }
+    /*
+    private void Start()
+    {
+        //将获取的UI一一生成，每个敌人身上一个，放在Start中只生成一次，否则会刷出很多ui
+        //_canvas = Instantiate(canvas, transform.position , Quaternion.identity) as GameObject;
+        //_slider = _canvas.GetComponentInChildren<Slider>();  //获取每一个bloodUi的slider，必须放在_canvas下面.
+    }
+    */
+
+    // Update is called once per frame
+    void FixedUpdate () {
+        /* enemy的正前方射线检测，如果不是玩家就正常行走且遇到障碍物会规避。如果检测到玩家，切换到跑步姿态通过NavMeshAgent寻路到目标体的位置，并且不断计算。
+        * 在引擎中的NavMeshAgent组件会设置 stop distance 为 1.5，否则 两个碰撞体相撞，玩家的位置偏移，敌人就会在原先计算的目标点打转。 
+         */
+
+        //rig.position += new Vector3(0, 0, moveSpeed * Time.fixedDeltaTime);
+        Ray ray_forward = new Ray(transform.position, transform.forward);
+
+        Vector3 distance = player.transform.position - transform.position;   //计算敌人到玩家的方向。
+        Ray ray_distance = new Ray(transform.position, distance);            //声明一个敌人到玩家的射线。
+
+        RaycastHit hit_forward;
+        RaycastHit hit_distance;
+        
+        if(Physics.SphereCast(ray_distance,1.5f,out hit_distance))
+        {
+            GameObject hit1Object = hit_distance.transform.gameObject;
+
+            if (hit_distance.distance < _ray2Distance && hit1Object == player)
+            {
+                _ray2Distance = 70.0f;
+                if (nav.enabled)      //这是在敌人死亡时该判断的条件，如果死亡了，就把NavMeshAgent关掉。
+                {
+                    if(hit_distance.distance < _ray2Distance)
+                    {
+                        nav.SetDestination(hit1Object.transform.position);    //Nav
+                    }                   
+                }
+                else
+                {
+                    return;
+                }
+                Debug.DrawRay(transform.position, transform.forward, Color.blue);
+
+                anima.SetBool("Walk", false);
+                anima.SetBool("Run", true);
+
+                if (Vector3.Distance(hit1Object.transform.position, transform.position) < 2.0f)   //计算二者之间的距离.
+                {
+                    float probability = Random.Range(0, 100);  //判断是进行蹲着攻击还是站在攻击.
+                    if (probability > 40)
+                    {
+                        anima.SetBool("SquatAttack", true);
+                    }
+                    else
+                    {
+                        anima.SetBool("Attack", true);
+                    }
+                    anima.SetBool("Run", false);
+
+                }
+                else
+                {
+                    anima.SetBool("Attack", false);
+                    anima.SetBool("SquatAttack", false);
+                    anima.SetBool("Run", true);
+                }
+            }
+        }
+
+        if(Physics.SphereCast(ray_forward, 1.5f, out hit_forward))
+        {
+            GameObject hitObject = hit_forward.transform.gameObject;  // get object of hit.           
+
+            if (hitObject != player)
+            {
+                if (nav.enabled)    //通过NavMeshAgent是否关闭来判断该不该执行自动行走
+                {
+                    transform.Translate(0, 0, moveSpeed * Time.deltaTime);
+                }
+                else               //如果关闭，直接返回，避免出现报错。
+                {
+                    return;
+                }
+                
+                anima.SetBool("Walk", true); 
+
+                if (hit_forward.distance < _ray1Distance)
+                {
+                    float round = Random.Range(-110, 100);
+                    transform.Rotate(0, round, 0);
+                    moveSpeed = 1.5f;
+                }
+            }
+            else if (hitObject.GetComponent<PlayerAnimator>())
+            {
+                return;
+            }       
+        }
+
+	}  
+
+    private void LateUpdate()
+    {
+        //在LateUpdate里调用UI的旋转，这样作为子物体的UI不会出现旋转bug。
+        canvas.transform.rotation = Camera.main.transform.rotation;  
+    }
+
+    public void AttackStart()
+    {
+        _Enemy1Collider.enabled = true;
+
+    }
+    public void AttackEnd()
+    {
+        _Enemy1Collider.enabled = false;     
+    }
+ 
+    
+
+
+    /*
+    /// <summary>
+    /// 这个方法写错了，但是舍不得删。。
+    /// </summary>
+    private void BloodUIControl()
+    {       
+        //canvas.transform.position = transform.position + new Vector3(0.0f, 1.9f, 0.0f);
+        //canvas.transform.rotation = Camera.main.transform.rotation;
+        //canvas.transform.LookAt(Camera.main.transform.position);
+        //_slider.value = (float)hp / (float)hpMax;   //强制进行float运算
+        
+        /// <summary>
+        /// 这个方法是与Start方法里的Instantiate相呼应，因为考虑到敌人经常出现旋转，为了避免出现bug，所以将血条UI单独拿出来写。
+        /// 首先是再声明一个_canvas来保存获取到的ui，然后将这个_canvas一一附加上生成的各个Enemy1的身上，否则只有一个Enemy1才会有ui。
+        /// 血条ui的位置是跟随Enemy1移动，但旋转必须得和主相机一致。 boss（Enemy2）的ui也差不多是这个做法，但是不用再获取两遍了。因为boss只有一个.
+        /// </summary>
+    }
+    */
+}
