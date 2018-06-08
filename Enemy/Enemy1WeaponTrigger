@@ -1,0 +1,28 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Enemy1Weapon : MonoBehaviour {
+
+    /*这个类是调用Enemy1对玩家造成伤害的计算*/
+
+    private PlayerAttribute playerAttribute;
+
+    //Audio
+    [SerializeField] private AudioSource enemy1Audio;
+
+    public void OnTriggerEnter(Collider other)
+    {
+        if (other.tag == "Player")
+        {
+            int _AttackValue = Random.Range(1, 5);
+            playerAttribute = other.gameObject.GetComponent<PlayerAttribute>();
+            playerAttribute.PlayerAttributeContorl(_AttackValue);  //执行玩家受攻击的方法.
+
+            if(_AttackValue > 2)
+            {
+                enemy1Audio.Play();
+            }
+        }
+    }
+}
