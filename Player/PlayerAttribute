@@ -1,0 +1,52 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class PlayerAttribute : MonoBehaviour {
+    int n = 1;
+
+    [SerializeField] private Slider _PlayerSlider;   //PlayerBloodUISlider.
+    [SerializeField] private Text _PlayerHpText;
+    [SerializeField] private Animator anima;  //player animator
+
+    public int _PlayerHp;
+    [SerializeField] private int _PlayerMaxHp = 1000;
+
+    public bool _OnOrOffAttack;  //在玩家死亡时为false；
+
+    //接收Enemy2的视角锁定bool在的类
+    [SerializeField] private Enemy2Control enemy2Control;
+
+    private void Awake()
+    {
+        _OnOrOffAttack = true;   //开始时为true。死亡时为false；
+        _PlayerHp = 1000;
+    }
+
+    public void PlayerAttributeContorl(int value)
+    {       
+            //int _AttackValue = Random.Range(5, 10);
+            int hitValue = Random.Range(0, 15);
+            if (hitValue == 7)
+            {
+                anima.SetTrigger("Hit");
+            }
+
+            _PlayerHp -= value;
+            _PlayerHpText.text = _PlayerHp + " / " + _PlayerMaxHp;
+            _PlayerSlider.value = (float)_PlayerHp / (float)_PlayerMaxHp;
+
+            if (_PlayerHp <= 0)
+            {
+                anima.SetBool("Die", true);
+                _OnOrOffAttack = false;
+                enemy2Control.viewLock = true;              
+                Debug.Log("Player Die");
+            }
+
+            Debug.Log("击中玩家 " + n);
+            n++;
+        
+    }
+}
